@@ -35,9 +35,6 @@ model Character {
   wisdom       Int @default(5)
   luck         Int @default(5)
 
-  currentHp Int @default(50)
-  maxHp     Int @default(50)
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

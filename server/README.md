@@ -45,6 +45,9 @@ user accounts.
   actually being designed. Worth revisiting once schema/migrations work
   starts in earnest.
 - Character stats (`strength`/`agility`/`focus`/`intelligence`/`wisdom`/
-  `luck`) start at a flat placeholder value (5) and HP at a placeholder
-  50/50 — real starting spreads depend on the class system and combat
-  balancing, not yet built.
+  `luck`) start at a flat placeholder value (5) — real starting spreads
+  depend on the class system and combat balancing, not yet built.
+- No player HP/damage: enemies never deal damage back. The player defeats
+  enemies purely through exercise (steps, banked AP) — there's no
+  mechanic by which the player takes damage or can "lose" a fight, only
+  ways to defeat it faster or slower.

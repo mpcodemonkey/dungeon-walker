@@ -48,8 +48,6 @@ export interface Character {
   intelligence: number;
   wisdom: number;
   luck: number;
-  currentHp: number;
-  maxHp: number;
 }
 
 export interface AuthUser {
