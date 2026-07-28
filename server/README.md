@@ -6,19 +6,36 @@ deliberately, since this is the primary anti-cheat surface for the game).
 
 ## Current state
 
-Scaffold only: an Express app with a `/health` endpoint, and a Prisma
-schema with a placeholder `User` model. No auth or game logic yet.
+Auth + core data model: email/password accounts, one character per
+account (name + the six stats, placeholder starting values), JWT-based
+session tokens. No gameplay yet.
 
 ## Setup
 
 ```
 npm install
-cp .env.example .env   # then point DATABASE_URL at a real Postgres instance
-npx prisma generate
+cp .env.example .env   # then point DATABASE_URL at a real Postgres instance, set JWT_SECRET
+npx prisma migrate dev
 npm run dev
 ```
 
 `GET /health` should respond `{"status":"ok"}`.
+
+## Auth endpoints
+
+- `POST /auth/signup` — body `{ email, password, characterName }`, creates
+  a user + their character, returns `{ token, user, character }`
+- `POST /auth/login` — body `{ email, password }`, returns
+  `{ token, user, character }`
+- `GET /me` — requires `Authorization: Bearer <token>`, returns
+  `{ user, character }`
+
+Passwords are hashed with bcrypt; tokens are signed JWTs read from
+`JWT_SECRET`. Access tokens are long-lived (30 days) with no refresh-token
+rotation or revocation yet — fine for a prototype single-device flow, but
+worth hardening (short-lived access token + rotating refresh token, or a
+server-side session/blocklist for revocation) before this handles real
+user accounts.
 
 ## Notes
 
@@ -27,5 +44,7 @@ npm run dev
   adds setup complexity not worth taking on before the data layer is
   actually being designed. Worth revisiting once schema/migrations work
   starts in earnest.
-- No migrations have been run yet; `prisma/schema.prisma` currently holds
-  a placeholder model only.
+- Character stats (`strength`/`agility`/`focus`/`intelligence`/`wisdom`/
+  `luck`) start at a flat placeholder value (5) and HP at a placeholder
+  50/50 — real starting spreads depend on the class system and combat
+  balancing, not yet built.

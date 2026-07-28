@@ -4,19 +4,26 @@ Expo (React Native + TypeScript) client for iOS and Android.
 
 ## Current state
 
-Location + map spike only: requests foreground location permission, then
-renders a map centered on the device's live position with a placeholder
-marker for the player avatar. No game logic yet.
+Sign up / log in against the server, then a map screen: requests
+foreground location permission, renders a map centered on the device's
+live position with a placeholder marker for the player avatar, and shows
+the signed-in character's name/level with a log-out button. No gameplay
+yet.
 
 ## Setup
 
 ```
 npm install
+cp .env.example .env   # point EXPO_PUBLIC_API_URL at your running server, see comments in the file
 npx expo start
 ```
 
 Scan the QR code with Expo Go (iOS/Android), or press `i` / `a` to launch
-a simulator/emulator (requires Xcode / Android Studio respectively).
+a simulator/emulator (requires Xcode / Android Studio respectively). The
+server (`/server`) needs to be running and reachable from wherever the
+app runs — see the `EXPO_PUBLIC_API_URL` comments in `.env.example` for
+the right host per platform (physical device needs your computer's LAN
+IP, not `localhost`).
 
 Pinned to **Expo SDK 54** to match whatever the Expo Go app on the App
 Store / Play Store currently supports — Expo Go only runs one SDK version
@@ -35,5 +42,8 @@ Expo's API from your network).
   no key needed).
 - No 16-bit tile styling yet — this spike uses the default map style to
   first prove the location → map pipeline works.
-- No auth, no character, no gameplay — see the root `README.md` for the
-  overall build order.
+- Session token is a long-lived JWT in `expo-secure-store` with no
+  refresh/rotation — matches the current server-side simplification, see
+  `server/README.md`.
+- No gameplay yet (encounters, combat, dungeons, classes) — see the root
+  `README.md` for the overall build order.

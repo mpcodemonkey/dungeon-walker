@@ -9,8 +9,10 @@ post-apocalyptic style.
 
 ## Status
 
-Early scaffold. Core gameplay loop (encounters, combat, dungeons, classes)
-is not implemented yet — see the build-order notes below.
+Foundations in progress: project scaffold and account auth (sign up/log
+in, one character per account with placeholder stats) are done. Core
+gameplay loop (movement→AP, encounters, combat, dungeons, classes) is not
+implemented yet — see the build-order notes below.
 
 ## Stack
 

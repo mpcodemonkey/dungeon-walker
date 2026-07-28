@@ -1,109 +1,39 @@
-import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
-import * as Location from 'expo-location';
-import MapView, { Marker } from 'react-native-maps';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { AuthProvider, useAuth } from './src/auth/AuthContext';
+import { AuthScreen } from './src/screens/AuthScreen';
+import { MapScreen } from './src/screens/MapScreen';
 
-type LoadState =
-  | { status: 'requesting-permission' }
-  | { status: 'permission-denied' }
-  | { status: 'locating' }
-  | { status: 'ready'; coords: { latitude: number; longitude: number } }
-  | { status: 'error'; message: string };
+function Root() {
+  const auth = useAuth();
 
-export default function App() {
-  const [state, setState] = useState<LoadState>({ status: 'requesting-permission' });
-
-  useEffect(() => {
-    let subscription: Location.LocationSubscription | undefined;
-
-    (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setState({ status: 'permission-denied' });
-        return;
-      }
-
-      setState({ status: 'locating' });
-
-      subscription = await Location.watchPositionAsync(
-        { accuracy: Location.Accuracy.Balanced, timeInterval: 2000, distanceInterval: 5 },
-        (location) => {
-          setState({
-            status: 'ready',
-            coords: {
-              latitude: location.coords.latitude,
-              longitude: location.coords.longitude,
-            },
-          });
-        }
-      );
-    })().catch((error) => {
-      setState({ status: 'error', message: error instanceof Error ? error.message : String(error) });
-    });
-
-    return () => subscription?.remove();
-  }, []);
-
-  if (state.status === 'ready') {
+  if (auth.status === 'loading') {
     return (
-      <View style={styles.container}>
-        <MapView
-          style={styles.map}
-          initialRegion={{
-            latitude: state.coords.latitude,
-            longitude: state.coords.longitude,
-            latitudeDelta: 0.005,
-            longitudeDelta: 0.005,
-          }}
-          showsUserLocation={false}
-        >
-          <Marker coordinate={state.coords} title="You" description="Placeholder avatar" />
-        </MapView>
-        <StatusBar style="auto" />
+      <View style={styles.centered}>
+        <ActivityIndicator />
       </View>
     );
   }
 
+  if (auth.status === 'signed-out') {
+    return <AuthScreen />;
+  }
+
+  return <MapScreen character={auth.character} onSignOut={auth.signOut} />;
+}
+
+export default function App() {
   return (
-    <View style={styles.container}>
-      <View style={styles.centered}>
-        <Text style={styles.statusText}>{statusMessage(state)}</Text>
-      </View>
-      <StatusBar style="auto" />
-    </View>
+    <AuthProvider>
+      <Root />
+    </AuthProvider>
   );
 }
 
-function statusMessage(state: Exclude<LoadState, { status: 'ready' }>): string {
-  switch (state.status) {
-    case 'requesting-permission':
-      return 'Requesting location permission…';
-    case 'permission-denied':
-      return 'Location permission denied. Dungeon Walker needs location access to place your avatar on the map.';
-    case 'locating':
-      return 'Finding your location…';
-    case 'error':
-      return `Something went wrong: ${state.message}`;
-  }
-}
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  map: {
-    flex: 1,
-  },
   centered: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  statusText: {
-    textAlign: 'center',
-    fontSize: 16,
+    backgroundColor: '#fff',
   },
 });

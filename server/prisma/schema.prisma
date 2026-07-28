@@ -7,9 +7,37 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Placeholder — will grow into the account model once the auth chunk lands.
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  character Character?
+}
+
+// One character per user for now. Stat defaults are placeholders — real
+// starting values (and how classes/gear modify them) land with the class
+// system and combat balancing work.
+model Character {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+
+  name  String
+  level Int    @default(1)
+  xp    Int    @default(0)
+
+  strength     Int @default(5)
+  agility      Int @default(5)
+  focus        Int @default(5)
+  intelligence Int @default(5)
+  wisdom       Int @default(5)
+  luck         Int @default(5)
+
+  currentHp Int @default(50)
+  maxHp     Int @default(50)
+
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
