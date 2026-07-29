@@ -58,6 +58,7 @@ The application is being built in vertical slices, roughly in this order:
 ## Design docs
 
 - `docs/chunk-3-movement.md` — movement/AP pipeline implementation plan
+- `docs/chunk-4-combat.md` — encounters, step/AP damage routing, XP/leveling plan
 - `docs/raids-design.md` — multiplayer boss raid concept (later phase)
 
 ## Development
