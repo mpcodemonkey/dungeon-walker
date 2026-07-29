@@ -45,7 +45,28 @@ Scan the QR code with Expo Go, or press `i` to launch the simulator
 
 ### Android (needs a custom dev client)
 
-Pick one:
+First, get a Google Maps API key (required — `react-native-maps` won't
+render without one, and the app fails at launch with a clear "API key not
+found" screen if it's missing):
+
+1. In [Google Cloud Console](https://console.cloud.google.com/), create/select
+   a project, then enable the **"Maps SDK for Android"** API.
+2. Create an API key under **APIs & Services → Credentials**.
+3. Recommended: restrict the key to Android apps, with package name
+   `com.dungeonwalker.app` (see `app.config.js`) and your build's SHA-1
+   signing fingerprint (EAS shows this in its build output; for a local
+   debug build, `keytool -list -v -keystore ~/.android/debug.keystore`
+   with password `android`).
+
+Then set `ANDROID_GOOGLE_MAPS_API_KEY` (see `.env.example`):
+
+- **Local builds**: add it to `mobile/.env` (already gitignored).
+- **EAS cloud builds**: `.env` isn't available inside EAS's cloud build
+  environment, so set it there directly, e.g.
+  `npx eas env:create --name ANDROID_GOOGLE_MAPS_API_KEY --value <your-key> --environment development`
+  (or via the EAS dashboard).
+
+Then pick one build path:
 
 **A. EAS Build (cloud, recommended — no local Android SDK needed)**
 ```
@@ -95,10 +116,15 @@ Expo's API from your network).
   contributing step data, reads will just come back empty even with
   permission granted correctly. That's a device/OS configuration issue,
   not an app bug.
-- **`android.package`** in `app.json` is currently the placeholder
+- **`android.package`** in `app.config.js` is currently the placeholder
   `com.dungeonwalker.app` — change this to a real, owned identifier
   before any Play Store submission; package names can't be changed after
   first publish.
+- **Config is `app.config.js`, not `app.json`.** Switched so the Google
+  Maps API key can be read from an environment variable
+  (`ANDROID_GOOGLE_MAPS_API_KEY`) instead of being committed in plain
+  text — logs a clear warning at config-resolution time if it's missing
+  rather than failing silently until the app launches on-device.
 - **Play Store health-permission review**: publishing an app that
   requests Health Connect permissions requires a declaration form in Play
   Console, with review taking up to ~7 days plus ~5-7 more for whitelist
@@ -112,9 +138,8 @@ Expo's API from your network).
   Verified against a real `expo prebuild` run — see the plugin file for
   what it injects.
 - **Android maps**: `react-native-maps` needs a Google Maps API key on
-  Android. Add it under `expo.android.config.googleMaps.apiKey` in
-  `app.json` before building for Android (iOS uses Apple Maps by default,
-  no key needed).
+  Android — see the "Android (needs a custom dev client)" setup section
+  above (iOS uses Apple Maps by default, no key needed).
 - No 16-bit tile styling yet — the map spike uses the default style to
   first prove the location → map pipeline works.
 - Session token is a long-lived JWT in `expo-secure-store` with no
