@@ -11,16 +11,18 @@ interface Coordinates {
   longitude: number;
 }
 
+export type PedometerStatus = 'checking' | 'unavailable' | 'permission-denied' | 'active';
+
 interface StepSyncResult {
   bankedAp: number;
-  pedometerAvailable: boolean | undefined;
+  pedometerStatus: PedometerStatus;
 }
 
 // Foreground-only step tracking (see docs/chunk-3-movement.md — background
 // accrual is a separate, harder problem deferred to its own chunk).
 export function useStepSync(token: string, initialBankedAp: number, location: Coordinates | undefined): StepSyncResult {
   const [bankedAp, setBankedAp] = useState(initialBankedAp);
-  const [pedometerAvailable, setPedometerAvailable] = useState<boolean | undefined>(undefined);
+  const [pedometerStatus, setPedometerStatus] = useState<PedometerStatus>('checking');
 
   const cumulativeStepsRef = useRef(0);
   const lastSyncedStepsRef = useRef(0);
@@ -60,19 +62,29 @@ export function useStepSync(token: string, initialBankedAp: number, location: Co
 
     let subscription: { remove: () => void } | undefined;
 
-    Pedometer.isAvailableAsync()
-      .then((available) => {
-        setPedometerAvailable(available);
-        if (!available) return;
+    (async () => {
+      const available = await Pedometer.isAvailableAsync();
+      if (!available) {
+        setPedometerStatus('unavailable');
+        return;
+      }
 
-        subscription = Pedometer.watchStepCount(({ steps }) => {
-          cumulativeStepsRef.current = steps;
-          if (steps - lastSyncedStepsRef.current >= SYNC_STEP_THRESHOLD) {
-            void flush();
-          }
-        });
-      })
-      .catch(() => setPedometerAvailable(false));
+      // Required on Android (ACTIVITY_RECOGNITION) — without this, the step
+      // counter sensor silently delivers no events rather than erroring.
+      const { status } = await Pedometer.requestPermissionsAsync();
+      if (status !== 'granted') {
+        setPedometerStatus('permission-denied');
+        return;
+      }
+
+      setPedometerStatus('active');
+      subscription = Pedometer.watchStepCount(({ steps }) => {
+        cumulativeStepsRef.current = steps;
+        if (steps - lastSyncedStepsRef.current >= SYNC_STEP_THRESHOLD) {
+          void flush();
+        }
+      });
+    })().catch(() => setPedometerStatus('unavailable'));
 
     const interval = setInterval(() => void flush(), SYNC_INTERVAL_MS);
 
@@ -82,5 +94,5 @@ export function useStepSync(token: string, initialBankedAp: number, location: Co
     };
   }, [token]);
 
-  return { bankedAp, pedometerAvailable };
+  return { bankedAp, pedometerStatus };
 }

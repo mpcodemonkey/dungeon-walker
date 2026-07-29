@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import * as Location from 'expo-location';
 import MapView, { Marker } from 'react-native-maps';
 import type { Character } from '../api/client';
-import { useStepSync } from '../movement/useStepSync';
+import { useStepSync, type PedometerStatus } from '../movement/useStepSync';
 
 type LoadState =
   | { status: 'requesting-permission' }
@@ -21,7 +22,8 @@ interface MapScreenProps {
 
 export function MapScreen({ character, token, onSignOut }: MapScreenProps) {
   const [state, setState] = useState<LoadState>({ status: 'requesting-permission' });
-  const { bankedAp, pedometerAvailable } = useStepSync(
+  const insets = useSafeAreaInsets();
+  const { bankedAp, pedometerStatus } = useStepSync(
     token,
     character.bankedAp,
     state.status === 'ready' ? state.coords : undefined
@@ -60,13 +62,13 @@ export function MapScreen({ character, token, onSignOut }: MapScreenProps) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View>
           <Text style={styles.headerText}>
             {character.name} · Lv.{character.level}
           </Text>
           <Text style={styles.apText}>
-            {bankedAp} AP{pedometerAvailable === false ? ' · step tracking unavailable' : ''}
+            {bankedAp} AP{pedometerStatusSuffix(pedometerStatus)}
           </Text>
         </View>
         <TouchableOpacity onPress={onSignOut}>
@@ -95,6 +97,18 @@ export function MapScreen({ character, token, onSignOut }: MapScreenProps) {
       <StatusBar style="auto" />
     </View>
   );
+}
+
+function pedometerStatusSuffix(status: PedometerStatus): string {
+  switch (status) {
+    case 'unavailable':
+      return ' · step tracking unavailable on this device';
+    case 'permission-denied':
+      return ' · step tracking permission denied';
+    case 'checking':
+    case 'active':
+      return '';
+  }
 }
 
 function statusMessage(state: Exclude<LoadState, { status: 'ready' }>): string {

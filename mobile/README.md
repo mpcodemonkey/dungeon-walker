@@ -36,6 +36,21 @@ rest of the dependencies (or pin manually from
 `node_modules/expo/bundledNativeModules.json` if that command can't reach
 Expo's API from your network).
 
+## Notes
+
+- **Android edge-to-edge**: Android 15+ draws app content behind the
+  system status/nav bars by default. Screens use
+  `react-native-safe-area-context` (`SafeAreaProvider` in `App.tsx`,
+  `useSafeAreaInsets`/`SafeAreaView` in the screens) to pad away from
+  them — if you add a new top-level screen, it needs the same treatment
+  or its header will render under the status bar.
+- **Android step permission**: the step counter sensor requires the
+  `ACTIVITY_RECOGNITION` runtime permission, requested via
+  `Pedometer.requestPermissionsAsync()` in `useStepSync`. Declaring it in
+  `app.json`'s `android.permissions` isn't enough by itself — without the
+  runtime request, the sensor silently delivers no events instead of
+  erroring, which looks like "steps just aren't accruing."
+
 ## Known gaps before this is a real build
 
 - **Android maps**: `react-native-maps` needs a Google Maps API key on

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthContext';
 import { ApiError } from '../api/client';
 
@@ -29,53 +30,52 @@ export function AuthScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <Text style={styles.title}>Dungeon Walker</Text>
-      <Text style={styles.subtitle}>{mode === 'login' ? 'Log in' : 'Create your account'}</Text>
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <Text style={styles.title}>Dungeon Walker</Text>
+        <Text style={styles.subtitle}>{mode === 'login' ? 'Log in' : 'Create your account'}</Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        autoCapitalize="none"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
-      {mode === 'signup' && (
         <TextInput
           style={styles.input}
-          placeholder="Character name"
-          value={characterName}
-          onChangeText={setCharacterName}
+          placeholder="Email"
+          autoCapitalize="none"
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
         />
-      )}
-
-      {error && <Text style={styles.error}>{error}</Text>}
-
-      <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} disabled={submitting}>
-        {submitting ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.submitButtonText}>{mode === 'login' ? 'Log in' : 'Sign up'}</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Password"
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
+        {mode === 'signup' && (
+          <TextInput
+            style={styles.input}
+            placeholder="Character name"
+            value={characterName}
+            onChangeText={setCharacterName}
+          />
         )}
-      </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => setMode(mode === 'login' ? 'signup' : 'login')}>
-        <Text style={styles.toggleText}>
-          {mode === 'login' ? "Don't have an account? Sign up" : 'Already have an account? Log in'}
-        </Text>
-      </TouchableOpacity>
-    </KeyboardAvoidingView>
+        {error && <Text style={styles.error}>{error}</Text>}
+
+        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} disabled={submitting}>
+          {submitting ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.submitButtonText}>{mode === 'login' ? 'Log in' : 'Sign up'}</Text>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => setMode(mode === 'login' ? 'signup' : 'login')}>
+          <Text style={styles.toggleText}>
+            {mode === 'login' ? "Don't have an account? Sign up" : 'Already have an account? Log in'}
+          </Text>
+        </TouchableOpacity>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
