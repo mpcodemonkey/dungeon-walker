@@ -18,7 +18,7 @@ function Root() {
     return <AuthScreen />;
   }
 
-  return <MapScreen character={auth.character} onSignOut={auth.signOut} />;
+  return <MapScreen character={auth.character} token={auth.token} onSignOut={auth.signOut} />;
 }
 
 export default function App() {

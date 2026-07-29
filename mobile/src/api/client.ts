@@ -48,6 +48,7 @@ export interface Character {
   intelligence: number;
   wisdom: number;
   luck: number;
+  bankedAp: number;
 }
 
 export interface AuthUser {
@@ -78,5 +79,26 @@ export function login(email: string, password: string): Promise<AuthResponse> {
 export function fetchMe(token: string): Promise<{ user: AuthUser; character: Character }> {
   return request('/me', {
     headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export interface ActivitySyncRequest {
+  stepCount: number;
+  clientStartedAt: string;
+  clientEndedAt: string;
+  location?: { latitude: number; longitude: number };
+}
+
+export interface ActivitySyncResponse {
+  bankedAp: number;
+  accepted: boolean;
+  flagged: boolean;
+}
+
+export function syncActivity(token: string, payload: ActivitySyncRequest): Promise<ActivitySyncResponse> {
+  return request<ActivitySyncResponse>('/activity/sync', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
   });
 }

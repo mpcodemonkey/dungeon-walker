@@ -9,7 +9,8 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Dungeon Walker uses your location to place your avatar on the map and reveal nearby dungeons."
+        "NSLocationWhenInUseUsageDescription": "Dungeon Walker uses your location to place your avatar on the map and reveal nearby dungeons.",
+        "NSMotionUsageDescription": "Dungeon Walker counts your steps to power your character's movement and combat."
       }
     },
     "android": {
@@ -20,7 +21,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
+      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION", "ACTIVITY_RECOGNITION"]
     },
     "web": {
       "favicon": "./assets/favicon.png"

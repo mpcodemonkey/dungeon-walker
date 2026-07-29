@@ -35,6 +35,34 @@ model Character {
   wisdom       Int @default(5)
   luck         Int @default(5)
 
+  // Banked Activity Points: steps earned but not yet spent. Capped at
+  // MAX_BANKED_AP (src/lib/constants.ts), does not decay over time.
+  bankedAp Int @default(0)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  activitySyncs ActivitySync[]
+}
+
+// Audit log of step-sync batches from the mobile client, not just a
+// running counter — needed for anti-cheat review and future streak/daily
+// stats features. See docs/chunk-3-movement.md.
+model ActivitySync {
+  id          String    @id @default(uuid())
+  character   Character @relation(fields: [characterId], references: [id])
+  characterId String
+
+  stepCount        Int
+  clientStartedAt  DateTime
+  clientEndedAt    DateTime
+  serverReceivedAt DateTime @default(now())
+
+  latitude  Float?
+  longitude Float?
+
+  flagged    Boolean @default(false)
+  flagReason String?
+
+  @@index([characterId])
 }

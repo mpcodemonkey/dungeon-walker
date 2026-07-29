@@ -9,10 +9,12 @@ post-apocalyptic style.
 
 ## Status
 
-Foundations in progress: project scaffold and account auth (sign up/log
-in, one character per account with placeholder stats) are done. Core
-gameplay loop (movement→AP, encounters, combat, dungeons, classes) is not
-implemented yet — see the build-order notes below.
+Foundations + movement done: project scaffold, account auth (sign up/log
+in, one character per account with placeholder stats), and the
+movement/AP pipeline (steps sync from the device pedometer and bank as
+Activity Points, avatar-on-map rendering). Encounters, combat, loot,
+dungeons, and classes are not implemented yet — see the build-order notes
+below.
 
 ## Stack
 

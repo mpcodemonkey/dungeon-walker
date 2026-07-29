@@ -7,7 +7,7 @@ const TOKEN_KEY = 'dungeon-walker-token';
 type AuthState =
   | { status: 'loading' }
   | { status: 'signed-out' }
-  | { status: 'signed-in'; user: AuthUser; character: Character };
+  | { status: 'signed-in'; user: AuthUser; character: Character; token: string };
 
 type AuthContextValue = AuthState & {
   signIn: (email: string, password: string) => Promise<void>;
@@ -29,7 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       try {
         const me = await fetchMe(token);
-        setState({ status: 'signed-in', user: me.user, character: me.character });
+        setState({ status: 'signed-in', user: me.user, character: me.character, token });
       } catch {
         await SecureStore.deleteItemAsync(TOKEN_KEY);
         setState({ status: 'signed-out' });
@@ -40,13 +40,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signIn(email: string, password: string) {
     const res = await apiLogin(email, password);
     await SecureStore.setItemAsync(TOKEN_KEY, res.token);
-    setState({ status: 'signed-in', user: res.user, character: res.character });
+    setState({ status: 'signed-in', user: res.user, character: res.character, token: res.token });
   }
 
   async function signUp(email: string, password: string, characterName: string) {
     const res = await apiSignup(email, password, characterName);
     await SecureStore.setItemAsync(TOKEN_KEY, res.token);
-    setState({ status: 'signed-in', user: res.user, character: res.character });
+    setState({ status: 'signed-in', user: res.user, character: res.character, token: res.token });
   }
 
   async function signOut() {

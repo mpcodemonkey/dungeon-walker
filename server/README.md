@@ -6,9 +6,11 @@ deliberately, since this is the primary anti-cheat surface for the game).
 
 ## Current state
 
-Auth + core data model: email/password accounts, one character per
-account (name + the six stats, placeholder starting values), JWT-based
-session tokens. No gameplay yet.
+Auth + core data model (email/password accounts, one character per
+account with the six placeholder stats, JWT sessions) plus the movement
+pipeline: the mobile app's step counts sync here and bank as Activity
+Points (AP). No encounters/combat/dungeons yet — see
+`docs/chunk-3-movement.md` at the repo root for the full design.
 
 ## Setup
 
@@ -37,6 +39,18 @@ worth hardening (short-lived access token + rotating refresh token, or a
 server-side session/blocklist for revocation) before this handles real
 user accounts.
 
+## Activity endpoint
+
+- `POST /activity/sync` — requires `Authorization: Bearer <token>`.
+  Body: `{ stepCount, clientStartedAt, clientEndedAt, location? }`.
+  Credits `stepCount` to the character's `bankedAp` (flat 1:1, capped at
+  `MAX_BANKED_AP` in `src/lib/constants.ts`), and persists an
+  `ActivitySync` audit row. Implausible step cadence or GPS-implied speed
+  gets `flagged: true` in the response and in the stored row, but is
+  **still credited** — see `docs/chunk-3-movement.md` for why syncs are
+  soft-flagged rather than rejected at this stage. Returns
+  `{ bankedAp, accepted, flagged }`.
+
 ## Notes
 
 - Prisma is pinned to v6 rather than the current v7 line — v7 moved to a
@@ -51,3 +65,9 @@ user accounts.
   enemies purely through exercise (steps, banked AP) — there's no
   mechanic by which the player takes damage or can "lose" a fight, only
   ways to defeat it faster or slower.
+- Plausibility checks in `/activity/sync` trust the client-reported
+  `clientStartedAt`/`clientEndedAt` timestamps for rate calculations —
+  a client could lie about elapsed time to lower its apparent
+  steps-per-minute. Acceptable for now given syncs are soft-flagged, not
+  rejected, but worth revisiting (e.g. anchoring against
+  `serverReceivedAt` deltas across syncs) before this matters for anti-cheat.

@@ -7,8 +7,10 @@ Expo (React Native + TypeScript) client for iOS and Android.
 Sign up / log in against the server, then a map screen: requests
 foreground location permission, renders a map centered on the device's
 live position with a placeholder marker for the player avatar, and shows
-the signed-in character's name/level with a log-out button. No gameplay
-yet.
+the signed-in character's name/level plus banked Activity Points (AP) in
+the header, with a log-out button. Steps counted via the device
+pedometer sync to the server in the background and bank as AP. No
+encounters/combat/dungeons yet.
 
 ## Setup
 
@@ -45,5 +47,10 @@ Expo's API from your network).
 - Session token is a long-lived JWT in `expo-secure-store` with no
   refresh/rotation — matches the current server-side simplification, see
   `server/README.md`.
+- Step tracking uses `expo-sensors`' `Pedometer`, which works inside Expo
+  Go (no custom dev client needed) but is foreground-only — steps stop
+  counting once the app is backgrounded. Background tracking, and
+  possibly moving to HealthKit/Health Connect for more authoritative
+  data, is deferred to its own chunk (see `docs/chunk-3-movement.md`).
 - No gameplay yet (encounters, combat, dungeons, classes) — see the root
   `README.md` for the overall build order.

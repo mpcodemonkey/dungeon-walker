@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as Location from 'expo-location';
 import MapView, { Marker } from 'react-native-maps';
 import type { Character } from '../api/client';
+import { useStepSync } from '../movement/useStepSync';
 
 type LoadState =
   | { status: 'requesting-permission' }
@@ -14,11 +15,17 @@ type LoadState =
 
 interface MapScreenProps {
   character: Character;
+  token: string;
   onSignOut: () => void;
 }
 
-export function MapScreen({ character, onSignOut }: MapScreenProps) {
+export function MapScreen({ character, token, onSignOut }: MapScreenProps) {
   const [state, setState] = useState<LoadState>({ status: 'requesting-permission' });
+  const { bankedAp, pedometerAvailable } = useStepSync(
+    token,
+    character.bankedAp,
+    state.status === 'ready' ? state.coords : undefined
+  );
 
   useEffect(() => {
     let subscription: Location.LocationSubscription | undefined;
@@ -54,9 +61,14 @@ export function MapScreen({ character, onSignOut }: MapScreenProps) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerText}>
-          {character.name} · Lv.{character.level}
-        </Text>
+        <View>
+          <Text style={styles.headerText}>
+            {character.name} · Lv.{character.level}
+          </Text>
+          <Text style={styles.apText}>
+            {bankedAp} AP{pedometerAvailable === false ? ' · step tracking unavailable' : ''}
+          </Text>
+        </View>
         <TouchableOpacity onPress={onSignOut}>
           <Text style={styles.logoutText}>Log out</Text>
         </TouchableOpacity>
@@ -115,6 +127,11 @@ const styles = StyleSheet.create({
   headerText: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  apText: {
+    fontSize: 13,
+    color: '#555',
+    marginTop: 2,
   },
   logoutText: {
     color: '#c0392b',
