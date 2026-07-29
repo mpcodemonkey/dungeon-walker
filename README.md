@@ -48,7 +48,14 @@ The application is being built in vertical slices, roughly in this order:
 5. **Dungeons** — POI-based discovery, multi-floor progression, per-floor
    narrative, boss fights, dungeon-specific loot
 6. **Classes** — 10 classes with primary-stat bonuses and abilities
-7. **Meta/retention** — social features, notifications, leaderboards
+7. **Meta/retention** — social features, notifications, leaderboards,
+   multiplayer boss raids (design sketched in `docs/raids-design.md`,
+   deliberately not scheduled until the solo loop above is working)
+
+## Design docs
+
+- `docs/chunk-3-movement.md` — movement/AP pipeline implementation plan
+- `docs/raids-design.md` — multiplayer boss raid concept (later phase)
 
 ## Development
 
