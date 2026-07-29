@@ -21,7 +21,12 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION", "ACTIVITY_RECOGNITION"]
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "android.permission.health.READ_STEPS"
+      ],
+      "package": "com.dungeonwalker.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -31,6 +36,16 @@
         "expo-location",
         {
           "locationWhenInUsePermission": "Dungeon Walker uses your location to place your avatar on the map and reveal nearby dungeons."
+        }
+      ],
+      "expo-health-connect",
+      "./plugins/withHealthConnectMainActivity",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          }
         }
       ]
     ]

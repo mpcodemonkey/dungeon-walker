@@ -71,19 +71,45 @@ Server-side:
 
 ## Mobile
 
-- **Step source: `expo-sensors`' `Pedometer`**, not HealthKit/Health
-  Connect directly. It works inside Expo Go, keeping the current testing
-  loop (SDK-matched Expo Go on a physical device) intact. HealthKit/Health
-  Connect are more authoritative and better for background tracking, but
-  require ejecting to a custom EAS dev client — worth doing deliberately
-  later (we'll need one eventually anyway, e.g. for the Android Google
-  Maps key), not as a side effect of this chunk.
+**Revised from the original plan below** — the chunk initially shipped
+with `expo-sensors`' `Pedometer` on both platforms (kept Expo Go working
+everywhere), but on-device testing found it never delivers step events on
+Android at all — a known, widely-reported upstream limitation, not a
+permission-request bug. Steps were correctly capped at 0 AP no matter how
+long the test ran. Fix: split the step source per platform.
+
+- **iOS**: `expo-sensors`' `Pedometer` (`stepSource.ios.ts`), via
+  `getStepCountAsync(since, now)`. Still works inside Expo Go.
+- **Android**: **Health Connect** (`stepSource.android.ts`), via
+  `react-native-health-connect`. Requires a custom dev client — Health
+  Connect's native module isn't part of Expo Go's fixed binary. This is
+  the tradeoff flagged (but deferred) in the original version of this doc;
+  it turned out to be forced sooner than expected because `expo-sensors`
+  doesn't work at all on Android, not just less reliably.
+- Both platforms share one interface (`stepSource.types.ts`) and are
+  picked automatically by Metro (bundling) and TypeScript (via
+  `moduleSuffixes` in `tsconfig.json`, so `tsc --noEmit` resolves the
+  right file too) based on the `.ios.ts`/`.android.ts` suffix — no
+  `Platform.OS` branching needed at the call site.
+- **Polling replaced the original watch+threshold design.** Health
+  Connect has no live "step taken" event, only range queries
+  (`readRecords('Steps', { timeRangeFilter })`, summed over `.count`). To
+  keep one code path for both platforms, `useStepSync` now polls
+  `getStepCountSince(lastSyncedAt)` on a timer (~45s, placeholder) instead
+  of the earlier per-step-threshold trigger.
 - **Foreground-only tracking for this chunk.** Background step accrual
   needs OS background-task permissions and battery-usage handling — a
   separate, harder problem deserving its own chunk.
-- App accumulates a local step delta and syncs on whichever comes first:
-  every ~50–100 steps or ~30–60s (placeholder thresholds, tunable).
-- `bankedAp` displayed in the `MapScreen` header next to name/level.
+- `bankedAp` displayed in the `MapScreen` header next to name/level, along
+  with a `pedometerStatus` (`checking`/`unavailable`/`permission-denied`/
+  `active`) so a broken step source is visible in the UI instead of
+  silently sitting at 0 AP.
+- A small custom Expo config plugin
+  (`mobile/plugins/withHealthConnectMainActivity.js`) registers
+  `HealthConnectPermissionDelegate` in `MainActivity.kt` during
+  `expo prebuild` — required by `react-native-health-connect` but not
+  handled by `expo-health-connect`'s own plugin (which only adds
+  AndroidManifest entries). Verified against a real prebuild run.
 
 ## Explicitly deferred
 

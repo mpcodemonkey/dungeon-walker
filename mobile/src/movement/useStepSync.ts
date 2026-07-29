@@ -1,17 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pedometer } from 'expo-sensors';
 import { syncActivity } from '../api/client';
+import { stepSource } from './stepSource';
+import type { PedometerStatus } from './stepSource.types';
 
-// Placeholder thresholds — tunable. See docs/chunk-3-movement.md.
-const SYNC_STEP_THRESHOLD = 75;
-const SYNC_INTERVAL_MS = 45_000;
+export type { PedometerStatus };
+
+// Placeholder — tunable. See docs/chunk-3-movement.md.
+const POLL_INTERVAL_MS = 45_000;
 
 interface Coordinates {
   latitude: number;
   longitude: number;
 }
-
-export type PedometerStatus = 'checking' | 'unavailable' | 'permission-denied' | 'active';
 
 interface StepSyncResult {
   bankedAp: number;
@@ -24,10 +24,9 @@ export function useStepSync(token: string, initialBankedAp: number, location: Co
   const [bankedAp, setBankedAp] = useState(initialBankedAp);
   const [pedometerStatus, setPedometerStatus] = useState<PedometerStatus>('checking');
 
-  const cumulativeStepsRef = useRef(0);
-  const lastSyncedStepsRef = useRef(0);
   const lastSyncedAtRef = useRef(new Date());
   const locationRef = useRef(location);
+  const readyRef = useRef(false);
   const syncingRef = useRef(false);
 
   useEffect(() => {
@@ -35,61 +34,49 @@ export function useStepSync(token: string, initialBankedAp: number, location: Co
   }, [location]);
 
   useEffect(() => {
-    async function flush() {
-      if (syncingRef.current) return;
-      const pendingSteps = cumulativeStepsRef.current - lastSyncedStepsRef.current;
-      if (pendingSteps <= 0) return;
+    let cancelled = false;
 
-      syncingRef.current = true;
+    async function flush() {
+      if (!readyRef.current || syncingRef.current) return;
+
       const clientStartedAt = lastSyncedAtRef.current;
       const clientEndedAt = new Date();
+
+      syncingRef.current = true;
       try {
+        const stepCount = await stepSource.getStepCountSince(clientStartedAt);
+        if (stepCount <= 0) return;
+
         const result = await syncActivity(token, {
-          stepCount: pendingSteps,
+          stepCount,
           clientStartedAt: clientStartedAt.toISOString(),
           clientEndedAt: clientEndedAt.toISOString(),
           location: locationRef.current,
         });
-        lastSyncedStepsRef.current = cumulativeStepsRef.current;
         lastSyncedAtRef.current = clientEndedAt;
         setBankedAp(result.bankedAp);
       } catch {
-        // Leave the pending steps queued — the next step or timer tick retries.
+        // Leave lastSyncedAtRef alone — the next tick re-covers this window.
       } finally {
         syncingRef.current = false;
       }
     }
 
-    let subscription: { remove: () => void } | undefined;
-
-    (async () => {
-      const available = await Pedometer.isAvailableAsync();
-      if (!available) {
-        setPedometerStatus('unavailable');
-        return;
-      }
-
-      // Required on Android (ACTIVITY_RECOGNITION) — without this, the step
-      // counter sensor silently delivers no events rather than erroring.
-      const { status } = await Pedometer.requestPermissionsAsync();
-      if (status !== 'granted') {
-        setPedometerStatus('permission-denied');
-        return;
-      }
-
-      setPedometerStatus('active');
-      subscription = Pedometer.watchStepCount(({ steps }) => {
-        cumulativeStepsRef.current = steps;
-        if (steps - lastSyncedStepsRef.current >= SYNC_STEP_THRESHOLD) {
-          void flush();
-        }
+    stepSource
+      .initialize()
+      .then((status) => {
+        if (cancelled) return;
+        setPedometerStatus(status);
+        readyRef.current = status === 'active';
+      })
+      .catch(() => {
+        if (!cancelled) setPedometerStatus('unavailable');
       });
-    })().catch(() => setPedometerStatus('unavailable'));
 
-    const interval = setInterval(() => void flush(), SYNC_INTERVAL_MS);
+    const interval = setInterval(() => void flush(), POLL_INTERVAL_MS);
 
     return () => {
-      subscription?.remove();
+      cancelled = true;
       clearInterval(interval);
     };
   }, [token]);
