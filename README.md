@@ -62,6 +62,7 @@ The application is being built in vertical slices, roughly in this order:
 
 - `docs/chunk-3-movement.md` — movement/AP pipeline implementation plan
 - `docs/chunk-4-combat.md` — encounters, step/AP damage routing, XP/leveling plan
+- `docs/maplibre-migration.md` — swapping the map layer to MapLibre + OSM tiles (scoped, not yet built)
 - `docs/raids-design.md` — multiplayer boss raid concept (later phase)
 
 ## Development
