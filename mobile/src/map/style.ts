@@ -18,6 +18,7 @@ export function buildMapStyle(): StyleSpecification {
       [SOURCE_NAME]: {
         type: 'vector',
         tiles: [`${apiUrl}/tiles/{z}/{x}/{y}.pbf`],
+        maxzoom: 20,
       },
     },
     layers: layers(SOURCE_NAME, LIGHT),

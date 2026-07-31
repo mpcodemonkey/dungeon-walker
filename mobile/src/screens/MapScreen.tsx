@@ -103,6 +103,7 @@ export function MapScreen({ character, token, onSignOut }: MapScreenProps) {
           <Camera
             ref={cameraRef}
             initialViewState={{ center: [state.coords.longitude, state.coords.latitude], zoom: 16 }}
+            maxZoom={20}
           />
           <Marker lngLat={[state.coords.longitude, state.coords.latitude]}>
             <View style={styles.avatarMarker} />
