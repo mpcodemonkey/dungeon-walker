@@ -102,6 +102,15 @@ Expo's API from your network).
 
 ## Notes
 
+- **`react`/`react-native` must be pinned to exact versions, no caret.**
+  React Native vendors a copy of its renderer built against one exact
+  React release; a caret range on `react` lets npm resolve a newer patch
+  that satisfies semver but doesn't match what's vendored, causing a
+  runtime crash ("Incompatible React versions") that only shows up when
+  the app actually launches on-device — `tsc` and Metro bundling both
+  stay silent about it. If you ever bump `expo`/`react-native`, re-pin
+  `react` and `react-native` to the exact versions in
+  `node_modules/expo/bundledNativeModules.json` for that SDK, not a range.
 - **Android edge-to-edge**: Android 15+ draws app content behind the
   system status/nav bars by default. Screens use
   `react-native-safe-area-context` (`SafeAreaProvider` in `App.tsx`,
