@@ -16,12 +16,30 @@ Points (AP). No encounters/combat/dungeons yet — see
 
 ```
 npm install
-cp .env.example .env   # then point DATABASE_URL at a real Postgres instance, set JWT_SECRET
-npx prisma migrate dev
+cp .env.example .env   # then set JWT_SECRET and point DATABASE_URL at Postgres, see below
+npx prisma migrate dev   # creates tables + Prisma client
 npm run dev
 ```
 
 `GET /health` should respond `{"status":"ok"}`.
+
+### Getting a Postgres instance
+
+Pick one, depending on what's already on your machine:
+
+**Docker:**
+```
+docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=password -e POSTGRES_DB=dungeon_walker postgres:16
+```
+`DATABASE_URL="postgresql://postgres:password@localhost:5432/dungeon_walker?schema=public"`
+
+**Native Postgres install:**
+```
+psql postgres -c "CREATE USER dungeon_walker WITH PASSWORD 'dungeon_walker';"
+psql postgres -c "CREATE DATABASE dungeon_walker OWNER dungeon_walker;"
+psql postgres -c "ALTER USER dungeon_walker CREATEDB;"   # lets `prisma migrate dev` create its shadow DB
+```
+`DATABASE_URL="postgresql://dungeon_walker:dungeon_walker@localhost:5432/dungeon_walker?schema=public"`
 
 ## Auth endpoints
 
