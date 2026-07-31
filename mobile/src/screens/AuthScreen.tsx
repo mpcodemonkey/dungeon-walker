@@ -38,6 +38,7 @@ export function AuthScreen() {
         <TextInput
           style={styles.input}
           placeholder="Email"
+          placeholderTextColor="#999"
           autoCapitalize="none"
           keyboardType="email-address"
           value={email}
@@ -46,6 +47,7 @@ export function AuthScreen() {
         <TextInput
           style={styles.input}
           placeholder="Password"
+          placeholderTextColor="#999"
           secureTextEntry
           value={password}
           onChangeText={setPassword}
@@ -54,6 +56,7 @@ export function AuthScreen() {
           <TextInput
             style={styles.input}
             placeholder="Character name"
+            placeholderTextColor="#999"
             value={characterName}
             onChangeText={setCharacterName}
           />
@@ -106,6 +109,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     marginBottom: 12,
     fontSize: 16,
+    color: '#000',
   },
   error: {
     color: '#c0392b',
