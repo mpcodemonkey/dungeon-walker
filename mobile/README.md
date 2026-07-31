@@ -102,6 +102,14 @@ Expo's API from your network).
 
 ## Notes
 
+- **Android blocks plain `http://` traffic by default in real native
+  builds** (unlike Expo Go, which is permissive about this for local
+  dev). Since the dev server runs on `http://<LAN-IP>:3000`, not HTTPS,
+  API calls fail outright — signup/login show a generic "Request failed"
+  error — without `android.usesCleartextTraffic: true` set via
+  `expo-build-properties` in `app.config.js`. **Remove this before any
+  production release** — the real API should be HTTPS, and this flag
+  shouldn't ship.
 - **`react`/`react-native` must be pinned to exact versions, no caret.**
   React Native vendors a copy of its renderer built against one exact
   React release; a caret range on `react` lets npm resolve a newer patch

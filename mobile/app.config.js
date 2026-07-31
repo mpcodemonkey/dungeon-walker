@@ -57,6 +57,12 @@ module.exports = {
         {
           android: {
             minSdkVersion: 26,
+            // Android blocks plain http:// traffic by default in real
+            // native builds (unlike Expo Go, which is permissive about
+            // this for local dev) — needed to reach the dev server over
+            // your LAN. Revisit before any production release: the real
+            // API should be HTTPS, and this should come out entirely.
+            usesCleartextTraffic: true,
           },
         },
       ],
