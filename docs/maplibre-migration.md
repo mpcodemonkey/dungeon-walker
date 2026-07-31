@@ -116,6 +116,33 @@ module the same way Health Connect is, so it isn't in Expo Go either —
 iOS now needs the same dev-client build flow Android already uses. See
 `mobile/README.md`'s updated iOS setup section.
 
+### The vector source's `maxzoom` must come from the real archive, not a guess
+
+Found after the initial implementation: the vector source's `maxzoom`
+field tells MapLibre the highest zoom for which the tileset actually has
+distinct tile data. Set it too high (an early version of this hardcoded
+`20`) and MapLibre keeps asking the tile-proxy for genuinely new tiles at
+zoom levels the `.pmtiles` archive doesn't have — every one of those
+comes back empty (`204`), so the map goes blank once you zoom in past the
+archive's real data, instead of correctly reusing and scaling up the
+highest-resolution tile it already has (the normal, expected way vector
+tile maps let you keep zooming in past their data's native resolution).
+
+Fix: `GET /tiles/metadata` (new server route) reads the configured
+`.pmtiles` file's own header via `pmtiles`' `getHeader()` — the archive
+already knows its own real `minZoom`/`maxZoom`/bounds, no need to guess
+or hardcode it. `mobile/src/map/style.ts` fetches this once and builds
+the source's `maxzoom` from the real value; `buildMapStyle()` is
+therefore now async (fetches before the style can be built), and
+`MapScreen.tsx` loads it in a `useEffect` rather than a synchronous
+`useMemo`. The `Camera`'s `maxZoom={20}` prop is a separate, unrelated
+knob — that one caps how far the *viewport* can zoom, independent of
+tile resolution, and MapLibre auto-oversamples the highest-zoom tile
+data to fill it in past the archive's native detail. Falls back to a
+guessed `15` if `/tiles/metadata` is unreachable (e.g. no `.pmtiles` file
+configured yet) — purely so the app doesn't crash; tiles won't load in
+that case regardless.
+
 ## What actually changes
 
 **Removed:**
@@ -144,6 +171,9 @@ chunks which were mobile-only map work):
 - `GET /tiles/:z/:x/:y.pbf` — reads the requested tile from the local
   `.pmtiles` file via the `pmtiles` npm package, serves it with correct
   headers. No auth needed — map tiles aren't player-specific data.
+- `GET /tiles/metadata` — the archive's real `minzoom`/`maxzoom`/`bounds`
+  from its own header, so the mobile client builds its vector source
+  against the truth instead of a guessed `maxzoom` (see above).
 - A one-time/occasional process for building or downloading the
   `.pmtiles` extract itself onto the server's disk — not part of the
   request path, doesn't need to live in the Express app.

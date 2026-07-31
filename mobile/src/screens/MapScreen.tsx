@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import * as Location from 'expo-location';
-import { Camera, Map, Marker, type CameraRef } from '@maplibre/maplibre-react-native';
+import { Camera, Map, Marker, type CameraRef, type StyleSpecification } from '@maplibre/maplibre-react-native';
 import type { Character } from '../api/client';
 import { useGameplayState, type PedometerStatus } from '../movement/useGameplayState';
 import { buildMapStyle } from '../map/style';
@@ -29,7 +29,7 @@ export function MapScreen({ character, token, onSignOut }: MapScreenProps) {
   const [state, setState] = useState<LoadState>({ status: 'requesting-permission' });
   const insets = useSafeAreaInsets();
   const cameraRef = useRef<CameraRef>(null);
-  const mapStyle = useMemo(() => buildMapStyle(), []);
+  const [mapStyle, setMapStyle] = useState<StyleSpecification>();
   const { bankedAp, level, pedometerStatus, encounter, combatMessage, engage, dismiss, spendAp } = useGameplayState(
     token,
     character.bankedAp,
@@ -44,6 +44,14 @@ export function MapScreen({ character, token, onSignOut }: MapScreenProps) {
       duration: 500,
     });
   }, [state]);
+
+  useEffect(() => {
+    buildMapStyle()
+      .then(setMapStyle)
+      .catch((error) => {
+        setState({ status: 'error', message: error instanceof Error ? error.message : String(error) });
+      });
+  }, []);
 
   useEffect(() => {
     let subscription: Location.LocationSubscription | undefined;
@@ -98,7 +106,7 @@ export function MapScreen({ character, token, onSignOut }: MapScreenProps) {
 
       {encounter && <EncounterCard encounter={encounter} bankedAp={bankedAp} onEngage={engage} onDismiss={dismiss} onSpendAp={spendAp} />}
 
-      {state.status === 'ready' ? (
+      {state.status === 'ready' && mapStyle ? (
         <Map style={styles.map} mapStyle={mapStyle}>
           <Camera
             ref={cameraRef}
@@ -111,7 +119,9 @@ export function MapScreen({ character, token, onSignOut }: MapScreenProps) {
         </Map>
       ) : (
         <View style={styles.centered}>
-          <Text style={styles.statusText}>{statusMessage(state)}</Text>
+          <Text style={styles.statusText}>
+            {state.status === 'ready' ? 'Loading map style…' : statusMessage(state)}
+          </Text>
         </View>
       )}
       <StatusBar style="auto" />

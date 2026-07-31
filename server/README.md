@@ -116,6 +116,12 @@ always server-derived — the client never asserts "I dealt N damage."
   malformed coordinates, `500` if `PMTILES_PATH` doesn't point at a
   readable `.pmtiles` file. See `docs/maplibre-migration.md` for why this
   proxy exists instead of pointing the mobile client at the file directly.
+- `GET /tiles/metadata` — `{ minzoom, maxzoom, bounds }` read straight
+  from the configured `.pmtiles` archive's own header. The mobile client
+  fetches this to build its vector source's `maxzoom` correctly — a
+  hardcoded/guessed value higher than what the archive actually has
+  causes the map to go blank past that zoom (see
+  `docs/maplibre-migration.md`).
 - `server/test-fixtures/pmtiles/` has two tiny (~470 byte) fixture files
   for exercising this route without a real map extract — not real map
   data, just the format's test fixtures upstream. Real `.pmtiles` data

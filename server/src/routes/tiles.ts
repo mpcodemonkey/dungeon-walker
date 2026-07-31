@@ -18,6 +18,25 @@ function parseTileParam(raw: string, suffix: string): number | undefined {
   return Number.isInteger(value) && value >= 0 ? value : undefined;
 }
 
+// Real zoom range/bounds baked into the configured .pmtiles archive, so
+// the client can build an accurate vector source instead of guessing a
+// maxzoom — a mismatch there means the client requests tiles past what
+// the archive actually has (every one comes back empty) instead of
+// correctly over-zooming the highest real tile it already has.
+tilesRouter.get('/metadata', async (_req, res) => {
+  try {
+    const header = await getPmtiles().getHeader();
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.json({
+      minzoom: header.minZoom,
+      maxzoom: header.maxZoom,
+      bounds: [header.minLon, header.minLat, header.maxLon, header.maxLat],
+    });
+  } catch {
+    res.status(500).json({ error: 'Failed to read tile metadata' });
+  }
+});
+
 // No auth — map tiles aren't player-specific data. See
 // docs/maplibre-migration.md for why this proxies a local .pmtiles file
 // instead of having the client read it directly.
