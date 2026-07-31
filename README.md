@@ -15,8 +15,10 @@ the movement/AP pipeline (steps sync and bank as Activity Points,
 avatar-on-map rendering), and combat (random encounters, step/AP-driven
 damage, XP/leveling with a small placeholder bestiary). Verified working
 end-to-end on a real Android device. Step tracking is platform-split —
-iOS via `expo-sensors` (works in Expo Go), Android via Health Connect
-(requires a custom dev client, see `mobile/README.md`). Loot/gear,
+iOS via `expo-sensors`, Android via Health Connect. Map rendering runs on
+MapLibre against self-hosted Protomaps vector tiles (`docs/maplibre-migration.md`)
+— no third-party map API key on either platform. Both platforms now need
+a custom dev client rather than Expo Go (see `mobile/README.md`). Loot/gear,
 dungeons, and classes are not implemented yet — see the build-order notes
 below.
 
@@ -62,7 +64,7 @@ The application is being built in vertical slices, roughly in this order:
 
 - `docs/chunk-3-movement.md` — movement/AP pipeline implementation plan
 - `docs/chunk-4-combat.md` — encounters, step/AP damage routing, XP/leveling plan
-- `docs/maplibre-migration.md` — swapping the map layer to MapLibre + OSM tiles (scoped, not yet built)
+- `docs/maplibre-migration.md` — swapping the map layer to MapLibre + self-hosted OSM/Protomaps tiles (implemented)
 - `docs/raids-design.md` — multiplayer boss raid concept (later phase)
 
 ## Development

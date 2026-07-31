@@ -105,6 +105,23 @@ always server-derived — the client never asserts "I dealt N damage."
   `docs/chunk-4-combat.md`) in the same transaction as resolving the
   encounter to `DEFEATED`.
 
+## Map tiles
+
+- `GET /tiles/:z/:x/:y.pbf` — no auth (map tiles aren't player-specific
+  data). Reads the requested tile out of a local `.pmtiles` file (path
+  from `PMTILES_PATH`, see `.env.example`) via the `pmtiles` npm package
+  and serves it as a vector tile (`application/x-protobuf`), decompressed
+  server-side. Returns `204` for a tile outside the archive's data (valid
+  request, no content — MapLibre treats this as an empty tile), `400` for
+  malformed coordinates, `500` if `PMTILES_PATH` doesn't point at a
+  readable `.pmtiles` file. See `docs/maplibre-migration.md` for why this
+  proxy exists instead of pointing the mobile client at the file directly.
+- `server/test-fixtures/pmtiles/` has two tiny (~470 byte) fixture files
+  for exercising this route without a real map extract — not real map
+  data, just the format's test fixtures upstream. Real `.pmtiles` data
+  goes in `/tiles` at the repo root (gitignored — see the comment in
+  `.gitignore`), built or downloaded per `docs/maplibre-migration.md`.
+
 ## Notes
 
 - Prisma is pinned to v6 rather than the current v7 line — v7 moved to a

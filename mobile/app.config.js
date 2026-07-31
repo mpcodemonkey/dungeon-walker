@@ -1,12 +1,3 @@
-const googleMapsApiKey = process.env.ANDROID_GOOGLE_MAPS_API_KEY;
-
-if (!googleMapsApiKey) {
-  console.warn(
-    'ANDROID_GOOGLE_MAPS_API_KEY is not set — the Android build will fail to render maps ' +
-      '(react-native-maps requires it). See mobile/README.md for how to get and set one.'
-  );
-}
-
 module.exports = {
   expo: {
     name: 'Dungeon Walker',
@@ -17,6 +8,7 @@ module.exports = {
     userInterfaceStyle: 'light',
     ios: {
       supportsTablet: true,
+      bundleIdentifier: 'com.dungeonwalker.app',
       infoPlist: {
         NSLocationWhenInUseUsageDescription:
           "Dungeon Walker uses your location to place your avatar on the map and reveal nearby dungeons.",
@@ -33,11 +25,6 @@ module.exports = {
       predictiveBackGestureEnabled: false,
       permissions: ['ACCESS_COARSE_LOCATION', 'ACCESS_FINE_LOCATION', 'android.permission.health.READ_STEPS'],
       package: 'com.dungeonwalker.app',
-      config: {
-        googleMaps: {
-          apiKey: googleMapsApiKey,
-        },
-      },
     },
     web: {
       favicon: './assets/favicon.png',
@@ -52,6 +39,7 @@ module.exports = {
       ],
       'expo-health-connect',
       './plugins/withHealthConnectMainActivity',
+      '@maplibre/maplibre-react-native',
       [
         'expo-build-properties',
         {

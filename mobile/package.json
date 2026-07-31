@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "main": "index.ts",
   "dependencies": {
+    "@maplibre/maplibre-react-native": "^11.3.6",
+    "@protomaps/basemaps": "^5.7.2",
     "expo": "^54.0.36",
     "expo-health-connect": "^0.1.1",
     "expo-location": "~19.0.8",
@@ -13,7 +15,6 @@
     "react": "19.1.0",
     "react-native": "0.81.5",
     "react-native-health-connect": "^3.5.3",
-    "react-native-maps": "^1.20.1",
     "react-native-safe-area-context": "~5.6.0"
   },
   "devDependencies": {

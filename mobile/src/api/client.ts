@@ -9,7 +9,7 @@ export class ApiError extends Error {
   }
 }
 
-function requireApiUrl(): string {
+export function requireApiUrl(): string {
   if (!API_URL) {
     throw new Error(
       'EXPO_PUBLIC_API_URL is not set. Copy .env.example to .env in /mobile and point it at your server (see README.md).'

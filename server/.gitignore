@@ -1,3 +1,8 @@
 node_modules/
 dist/
 .env
+
+# Real map tile data (large, user-built/downloaded — see
+# docs/maplibre-migration.md). Small committed fixtures live in
+# test-fixtures/pmtiles/ instead, which is NOT covered by this rule.
+/tiles/

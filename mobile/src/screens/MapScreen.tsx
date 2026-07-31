@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import * as Location from 'expo-location';
-import MapView, { Marker } from 'react-native-maps';
+import { Camera, Map, Marker, type CameraRef } from '@maplibre/maplibre-react-native';
 import type { Character } from '../api/client';
 import { useGameplayState, type PedometerStatus } from '../movement/useGameplayState';
+import { buildMapStyle } from '../map/style';
 
 type LoadState =
   | { status: 'requesting-permission' }
@@ -27,12 +28,22 @@ const AP_BURST_AMOUNT = 50;
 export function MapScreen({ character, token, onSignOut }: MapScreenProps) {
   const [state, setState] = useState<LoadState>({ status: 'requesting-permission' });
   const insets = useSafeAreaInsets();
+  const cameraRef = useRef<CameraRef>(null);
+  const mapStyle = useMemo(() => buildMapStyle(), []);
   const { bankedAp, level, pedometerStatus, encounter, combatMessage, engage, dismiss, spendAp } = useGameplayState(
     token,
     character.bankedAp,
     character.level,
     state.status === 'ready' ? state.coords : undefined
   );
+
+  useEffect(() => {
+    if (state.status !== 'ready') return;
+    cameraRef.current?.easeTo({
+      center: [state.coords.longitude, state.coords.latitude],
+      duration: 500,
+    });
+  }, [state]);
 
   useEffect(() => {
     let subscription: Location.LocationSubscription | undefined;
@@ -88,18 +99,15 @@ export function MapScreen({ character, token, onSignOut }: MapScreenProps) {
       {encounter && <EncounterCard encounter={encounter} bankedAp={bankedAp} onEngage={engage} onDismiss={dismiss} onSpendAp={spendAp} />}
 
       {state.status === 'ready' ? (
-        <MapView
-          style={styles.map}
-          initialRegion={{
-            latitude: state.coords.latitude,
-            longitude: state.coords.longitude,
-            latitudeDelta: 0.005,
-            longitudeDelta: 0.005,
-          }}
-          showsUserLocation={false}
-        >
-          <Marker coordinate={state.coords} title={character.name} description="Placeholder avatar" />
-        </MapView>
+        <Map style={styles.map} mapStyle={mapStyle}>
+          <Camera
+            ref={cameraRef}
+            initialViewState={{ center: [state.coords.longitude, state.coords.latitude], zoom: 16 }}
+          />
+          <Marker lngLat={[state.coords.longitude, state.coords.latitude]}>
+            <View style={styles.avatarMarker} />
+          </Marker>
+        </Map>
       ) : (
         <View style={styles.centered}>
           <Text style={styles.statusText}>{statusMessage(state)}</Text>
@@ -286,6 +294,14 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+  },
+  avatarMarker: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#2c3e50',
+    borderWidth: 2,
+    borderColor: '#fff',
   },
   centered: {
     flex: 1,
