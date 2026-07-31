@@ -5,7 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as Location from 'expo-location';
 import MapView, { Marker } from 'react-native-maps';
 import type { Character } from '../api/client';
-import { useStepSync, type PedometerStatus } from '../movement/useStepSync';
+import { useGameplayState, type PedometerStatus } from '../movement/useGameplayState';
 
 type LoadState =
   | { status: 'requesting-permission' }
@@ -20,12 +20,17 @@ interface MapScreenProps {
   onSignOut: () => void;
 }
 
+// Placeholder — how much AP a single "spend" tap burns. Tunable, see
+// docs/chunk-4-combat.md.
+const AP_BURST_AMOUNT = 50;
+
 export function MapScreen({ character, token, onSignOut }: MapScreenProps) {
   const [state, setState] = useState<LoadState>({ status: 'requesting-permission' });
   const insets = useSafeAreaInsets();
-  const { bankedAp, pedometerStatus } = useStepSync(
+  const { bankedAp, level, pedometerStatus, encounter, combatMessage, engage, dismiss, spendAp } = useGameplayState(
     token,
     character.bankedAp,
+    character.level,
     state.status === 'ready' ? state.coords : undefined
   );
 
@@ -65,7 +70,7 @@ export function MapScreen({ character, token, onSignOut }: MapScreenProps) {
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View>
           <Text style={styles.headerText}>
-            {character.name} · Lv.{character.level}
+            {character.name} · Lv.{level}
           </Text>
           <Text style={styles.apText}>
             {bankedAp} AP{pedometerStatusSuffix(pedometerStatus)}
@@ -75,6 +80,12 @@ export function MapScreen({ character, token, onSignOut }: MapScreenProps) {
           <Text style={styles.logoutText}>Log out</Text>
         </TouchableOpacity>
       </View>
+
+      {combatMessage && (
+        <Text style={styles.combatBanner}>{combatMessage}</Text>
+      )}
+
+      {encounter && <EncounterCard encounter={encounter} bankedAp={bankedAp} onEngage={engage} onDismiss={dismiss} onSpendAp={spendAp} />}
 
       {state.status === 'ready' ? (
         <MapView
@@ -95,6 +106,63 @@ export function MapScreen({ character, token, onSignOut }: MapScreenProps) {
         </View>
       )}
       <StatusBar style="auto" />
+    </View>
+  );
+}
+
+interface EncounterCardProps {
+  encounter: NonNullable<ReturnType<typeof useGameplayState>['encounter']>;
+  bankedAp: number;
+  onEngage: () => Promise<void>;
+  onDismiss: () => Promise<void>;
+  onSpendAp: (amount: number) => Promise<void>;
+}
+
+function EncounterCard({ encounter, bankedAp, onEngage, onDismiss, onSpendAp }: EncounterCardProps) {
+  const [busy, setBusy] = useState(false);
+
+  async function run(action: () => Promise<void>) {
+    setBusy(true);
+    try {
+      await action();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const vitalityFraction = encounter.currentVitality / encounter.enemy.maxVitality;
+
+  return (
+    <View style={styles.encounterCard}>
+      <Text style={styles.encounterTitle}>{encounter.enemy.name}</Text>
+      <View style={styles.vitalityTrack}>
+        <View style={[styles.vitalityFill, { width: `${Math.max(vitalityFraction * 100, 0)}%` }]} />
+      </View>
+      <Text style={styles.vitalityText}>
+        {encounter.currentVitality} / {encounter.enemy.maxVitality}
+      </Text>
+
+      {encounter.status === 'PENDING' ? (
+        <View style={styles.encounterActions}>
+          <TouchableOpacity style={styles.primaryButton} disabled={busy} onPress={() => run(onEngage)}>
+            <Text style={styles.primaryButtonText}>Engage</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.secondaryButton} disabled={busy} onPress={() => run(onDismiss)}>
+            <Text style={styles.secondaryButtonText}>Walk away</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={styles.encounterActions}>
+          <TouchableOpacity
+            style={[styles.primaryButton, bankedAp <= 0 && styles.buttonDisabled]}
+            disabled={busy || bankedAp <= 0}
+            onPress={() => run(() => onSpendAp(Math.min(AP_BURST_AMOUNT, bankedAp)))}
+          >
+            <Text style={styles.primaryButtonText}>Spend {Math.min(AP_BURST_AMOUNT, bankedAp)} AP</Text>
+          </TouchableOpacity>
+          <Text style={styles.encounterHint}>Keep walking — every step deals damage.</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -149,6 +217,72 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     color: '#c0392b',
+  },
+  combatBanner: {
+    backgroundColor: '#2c3e50',
+    color: '#fff',
+    textAlign: 'center',
+    paddingVertical: 8,
+    fontSize: 13,
+  },
+  encounterCard: {
+    margin: 12,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: '#fdecea',
+    borderWidth: 1,
+    borderColor: '#e6b3ad',
+  },
+  encounterTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  vitalityTrack: {
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#e0e0e0',
+    overflow: 'hidden',
+  },
+  vitalityFill: {
+    height: '100%',
+    backgroundColor: '#c0392b',
+  },
+  vitalityText: {
+    marginTop: 4,
+    fontSize: 12,
+    color: '#555',
+  },
+  encounterActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    gap: 12,
+  },
+  primaryButton: {
+    backgroundColor: '#2c3e50',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  primaryButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  secondaryButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  secondaryButtonText: {
+    color: '#2c3e50',
+  },
+  encounterHint: {
+    fontSize: 12,
+    color: '#555',
+    flexShrink: 1,
   },
   map: {
     flex: 1,

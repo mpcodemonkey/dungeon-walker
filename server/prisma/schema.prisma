@@ -43,6 +43,7 @@ model Character {
   updatedAt DateTime @updatedAt
 
   activitySyncs ActivitySync[]
+  encounters    Encounter[]
 }
 
 // Audit log of step-sync batches from the mobile client, not just a
@@ -63,6 +64,45 @@ model ActivitySync {
 
   flagged    Boolean @default(false)
   flagReason String?
+
+  @@index([characterId])
+}
+
+// Small placeholder bestiary — enough to prove the combat mechanic.
+// Real enemy variety is a later content pass. See docs/chunk-4-combat.md.
+model Enemy {
+  id          String @id @default(uuid())
+  name        String
+  maxVitality Int
+  xpReward    Int
+
+  encounters Encounter[]
+}
+
+enum EncounterStatus {
+  PENDING
+  ACTIVE
+  DEFEATED
+  DESPAWNED
+}
+
+// Private per-character encounter instance (see docs/chunk-3-movement.md
+// for the private-instance decision). One pending/active encounter per
+// character at a time, enforced in application code, not a DB constraint.
+model Encounter {
+  id          String    @id @default(uuid())
+  characterId String
+  character   Character @relation(fields: [characterId], references: [id])
+  enemyId     String
+  enemy       Enemy     @relation(fields: [enemyId], references: [id])
+
+  currentVitality Int
+  status          EncounterStatus @default(PENDING)
+
+  spawnedAt  DateTime  @default(now())
+  expiresAt  DateTime
+  engagedAt  DateTime?
+  resolvedAt DateTime?
 
   @@index([characterId])
 }

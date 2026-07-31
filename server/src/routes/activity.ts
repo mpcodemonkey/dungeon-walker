@@ -7,6 +7,13 @@ import {
   MAX_PLAUSIBLE_STEPS_PER_MINUTE,
   MAX_PLAUSIBLE_SPEED_METERS_PER_SECOND,
 } from '../lib/constants';
+import {
+  getCurrentEncounter,
+  maybeSpawnEncounter,
+  applyDamageToEncounter,
+  serializeEncounter,
+  type EncounterWithEnemy,
+} from '../lib/encounters';
 
 export const activityRouter = Router();
 
@@ -88,26 +95,51 @@ activityRouter.post('/sync', requireAuth, async (req, res) => {
   }
 
   const flagged = flagReasons.length > 0;
-  const nextBankedAp = Math.min(character.bankedAp + stepCount, MAX_BANKED_AP);
 
-  await prisma.$transaction([
-    prisma.activitySync.create({
-      data: {
-        characterId: character.id,
-        stepCount,
-        clientStartedAt,
-        clientEndedAt,
-        latitude: location?.latitude,
-        longitude: location?.longitude,
-        flagged,
-        flagReason: flagged ? flagReasons.join('; ') : undefined,
-      },
-    }),
-    prisma.character.update({
-      where: { id: character.id },
-      data: { bankedAp: nextBankedAp },
-    }),
-  ]);
+  const activitySyncData = {
+    characterId: character.id,
+    stepCount,
+    clientStartedAt,
+    clientEndedAt,
+    latitude: location?.latitude,
+    longitude: location?.longitude,
+    flagged,
+    flagReason: flagged ? flagReasons.join('; ') : undefined,
+  };
 
-  res.json({ bankedAp: nextBankedAp, accepted: true, flagged });
+  const currentEncounter = await getCurrentEncounter(character.id);
+
+  let bankedAp = character.bankedAp;
+  let encounterAfter: EncounterWithEnemy | null = currentEncounter;
+  let combat: { defeated: boolean; xpAwarded: number; levelsGained: number } | null = null;
+
+  if (currentEncounter?.status === 'ACTIVE') {
+    // Steps during an active encounter are consumed as damage, not
+    // banked — see docs/chunk-4-combat.md.
+    const result = await applyDamageToEncounter(currentEncounter, character, stepCount);
+    encounterAfter = result.defeated ? null : result.encounter;
+    combat = { defeated: result.defeated, xpAwarded: result.xpAwarded, levelsGained: result.levelsGained };
+
+    await prisma.activitySync.create({ data: activitySyncData });
+  } else {
+    bankedAp = Math.min(character.bankedAp + stepCount, MAX_BANKED_AP);
+
+    if (!currentEncounter) {
+      const spawned = await maybeSpawnEncounter(character.id);
+      if (spawned) encounterAfter = spawned;
+    }
+
+    await prisma.$transaction([
+      prisma.activitySync.create({ data: activitySyncData }),
+      prisma.character.update({ where: { id: character.id }, data: { bankedAp } }),
+    ]);
+  }
+
+  res.json({
+    bankedAp,
+    accepted: true,
+    flagged,
+    encounter: encounterAfter ? serializeEncounter(encounterAfter) : null,
+    combat,
+  });
 });

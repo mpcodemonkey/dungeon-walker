@@ -82,6 +82,31 @@ export function fetchMe(token: string): Promise<{ user: AuthUser; character: Cha
   });
 }
 
+export interface Enemy {
+  id: string;
+  name: string;
+  maxVitality: number;
+}
+
+export type EncounterStatus = 'PENDING' | 'ACTIVE' | 'DEFEATED' | 'DESPAWNED';
+
+export interface Encounter {
+  id: string;
+  status: EncounterStatus;
+  currentVitality: number;
+  enemy: Enemy;
+  spawnedAt: string;
+  expiresAt: string;
+  engagedAt: string | null;
+  resolvedAt: string | null;
+}
+
+export interface CombatResult {
+  defeated: boolean;
+  xpAwarded: number;
+  levelsGained: number;
+}
+
 export interface ActivitySyncRequest {
   stepCount: number;
   clientStartedAt: string;
@@ -93,6 +118,8 @@ export interface ActivitySyncResponse {
   bankedAp: number;
   accepted: boolean;
   flagged: boolean;
+  encounter: Encounter | null;
+  combat: CombatResult | null;
 }
 
 export function syncActivity(token: string, payload: ActivitySyncRequest): Promise<ActivitySyncResponse> {
@@ -100,5 +127,41 @@ export function syncActivity(token: string, payload: ActivitySyncRequest): Promi
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(payload),
+  });
+}
+
+export function fetchCurrentEncounter(token: string): Promise<{ encounter: Encounter | null }> {
+  return request('/encounters/current', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function engageEncounter(token: string, encounterId: string): Promise<{ encounter: Encounter }> {
+  return request(`/encounters/${encounterId}/engage`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function dismissEncounter(token: string, encounterId: string): Promise<{ ok: boolean }> {
+  return request(`/encounters/${encounterId}/dismiss`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export interface SpendApResponse {
+  encounter: Encounter;
+  defeated: boolean;
+  xpAwarded: number;
+  levelsGained: number;
+  bankedAp: number;
+}
+
+export function spendApOnEncounter(token: string, encounterId: string, amount: number): Promise<SpendApResponse> {
+  return request(`/encounters/${encounterId}/spend-ap`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ amount }),
   });
 }

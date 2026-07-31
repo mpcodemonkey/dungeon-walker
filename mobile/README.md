@@ -8,8 +8,12 @@ Sign up / log in against the server, then a map screen: requests
 foreground location permission, renders a map centered on the device's
 live position with a placeholder marker for the player avatar, and shows
 the signed-in character's name/level plus banked Activity Points (AP) in
-the header, with a log-out button. Steps sync to the server periodically
-and bank as AP. No encounters/combat/dungeons yet.
+the header, with a log-out button. Steps sync to the server periodically;
+with no active encounter they bank as AP, with one active they deal live
+damage instead (see `docs/chunk-4-combat.md`). When an encounter spawns,
+a card appears with Engage/Walk away (pending) or a vitality bar and
+Spend AP button (active); defeating one shows a banner with XP/level-up.
+No loot/gear or dungeons yet.
 
 Step tracking is platform-split (`src/movement/stepSource.ios.ts` /
 `stepSource.android.ts`, picked automatically by Metro/TypeScript based on
@@ -164,5 +168,11 @@ Expo's API from your network).
   `server/README.md`.
 - Foreground-only step tracking on both platforms — background accrual
   is deferred to its own chunk (see `docs/chunk-3-movement.md`).
-- No gameplay yet (encounters, combat, dungeons, classes) — see the root
+- `src/movement/useGameplayState.ts` (formerly `useStepSync`) now owns
+  banked AP, the current encounter, and combat actions together, not
+  just step syncing — kept in one hook because steps route to either AP
+  banking or live encounter damage within the same sync call, so
+  splitting it into a separate `useEncounter` would mean two hooks
+  fighting over the same interval/timing state.
+- No loot/gear or dungeons yet (classes either) — see the root
   `README.md` for the overall build order.

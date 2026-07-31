@@ -9,13 +9,16 @@ post-apocalyptic style.
 
 ## Status
 
-Foundations + movement done: project scaffold, account auth (sign up/log
-in, one character per account with placeholder stats), and the
-movement/AP pipeline (steps sync and bank as Activity Points, avatar-on-map
-rendering). Step tracking is platform-split — iOS via `expo-sensors`
-(works in Expo Go), Android via Health Connect (requires a custom dev
-client, see `mobile/README.md`). Encounters, combat, loot, dungeons, and
-classes are not implemented yet — see the build-order notes below.
+Foundations, movement, and combat core done: project scaffold, account
+auth (sign up/log in, one character per account with placeholder stats),
+the movement/AP pipeline (steps sync and bank as Activity Points,
+avatar-on-map rendering), and combat (random encounters, step/AP-driven
+damage, XP/leveling with a small placeholder bestiary). Verified working
+end-to-end on a real Android device. Step tracking is platform-split —
+iOS via `expo-sensors` (works in Expo Go), Android via Health Connect
+(requires a custom dev client, see `mobile/README.md`). Loot/gear,
+dungeons, and classes are not implemented yet — see the build-order notes
+below.
 
 ## Stack
 
