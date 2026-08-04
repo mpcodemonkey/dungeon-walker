@@ -46,6 +46,40 @@ pipeline (extended to check for an active encounter and route
 accordingly), or calls a `spend-ap` endpoint that debits the server's own
 `bankedAp` value. No new client-trust surface introduced.
 
+### Live damage feedback vs. sync cadence
+
+Found in practice, not planned upfront: the chunk 3 batching decision
+(steps sync every 45s to limit server calls) makes combat feel dead —
+the vitality bar only moves once per sync, so a player looking at their
+device mid-fight sees nothing happen for up to 45 seconds no matter how
+much they're actually walking.
+
+Fix has two parts, both mobile-only — nothing about "damage is always
+server-derived" above changes, since neither part ever credits real
+damage/XP/defeat:
+
+1. **`liveVitality` preview** (`useGameplayState.ts`): while an encounter
+   is `ACTIVE`, the client re-reads its own step source locally every
+   ~1s (`VITALITY_PREVIEW_INTERVAL_MS`) — a local device query, not a
+   network call — and computes `lastKnownServerVitality - stepsSinceLastSync`
+   for display. Purely cosmetic: it never itself marks a kill, awards XP,
+   or touches `bankedAp`. Re-anchors to the real server values on every
+   authoritative sync, so it can't drift further than one sync interval
+   before correcting.
+2. **Shorter sync cadence during combat only**: while `ACTIVE`, the real
+   `/activity/sync` interval drops from 45s to 5s
+   (`ACTIVE_ENCOUNTER_POLL_INTERVAL_MS`), reverting to 45s once the
+   encounter ends. Bounds how far the local preview can drift, and means
+   a real kill (XP/level-up banner) confirms within a few seconds instead
+   of lagging up to 45s behind what the bar already showed. Doesn't touch
+   the original server-call-reduction goal — it only tightens during the
+   (small) fraction of playtime spent mid-fight.
+
+This is the first place the client displays a number before the server
+has confirmed it — worth being explicit that it's a deliberate, bounded
+exception scoped to *display*, not a weakening of the "server decides
+what actually happened" rule.
+
 ### Damage formula stays flat
 
 1 step (or 1 AP spent) = 1 damage. No stat scaling yet — matches the AP

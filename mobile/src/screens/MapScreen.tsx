@@ -30,7 +30,7 @@ export function MapScreen({ character, token, onSignOut }: MapScreenProps) {
   const insets = useSafeAreaInsets();
   const cameraRef = useRef<CameraRef>(null);
   const [mapStyle, setMapStyle] = useState<StyleSpecification>();
-  const { bankedAp, level, pedometerStatus, encounter, combatMessage, engage, dismiss, spendAp } = useGameplayState(
+  const { bankedAp, level, pedometerStatus, encounter, liveVitality, combatMessage, engage, dismiss, spendAp } = useGameplayState(
     token,
     character.bankedAp,
     character.level,
@@ -104,7 +104,16 @@ export function MapScreen({ character, token, onSignOut }: MapScreenProps) {
         <Text style={styles.combatBanner}>{combatMessage}</Text>
       )}
 
-      {encounter && <EncounterCard encounter={encounter} bankedAp={bankedAp} onEngage={engage} onDismiss={dismiss} onSpendAp={spendAp} />}
+      {encounter && (
+        <EncounterCard
+          encounter={encounter}
+          liveVitality={liveVitality}
+          bankedAp={bankedAp}
+          onEngage={engage}
+          onDismiss={dismiss}
+          onSpendAp={spendAp}
+        />
+      )}
 
       {state.status === 'ready' && mapStyle ? (
         <Map style={styles.map} mapStyle={mapStyle}>
@@ -131,13 +140,14 @@ export function MapScreen({ character, token, onSignOut }: MapScreenProps) {
 
 interface EncounterCardProps {
   encounter: NonNullable<ReturnType<typeof useGameplayState>['encounter']>;
+  liveVitality: number | undefined;
   bankedAp: number;
   onEngage: () => Promise<void>;
   onDismiss: () => Promise<void>;
   onSpendAp: (amount: number) => Promise<void>;
 }
 
-function EncounterCard({ encounter, bankedAp, onEngage, onDismiss, onSpendAp }: EncounterCardProps) {
+function EncounterCard({ encounter, liveVitality, bankedAp, onEngage, onDismiss, onSpendAp }: EncounterCardProps) {
   const [busy, setBusy] = useState(false);
 
   async function run(action: () => Promise<void>) {
@@ -149,7 +159,15 @@ function EncounterCard({ encounter, bankedAp, onEngage, onDismiss, onSpendAp }: 
     }
   }
 
-  const vitalityFraction = encounter.currentVitality / encounter.enemy.maxVitality;
+  // liveVitality is a local, unconfirmed prediction shown for immediate
+  // feedback during combat — falls back to the last authoritative value
+  // outside combat or before the first local read completes. See
+  // useGameplayState's liveVitality doc comment for why this is safe to
+  // display without it ever crediting real damage.
+  const displayedVitality = encounter.status === 'ACTIVE' && liveVitality !== undefined
+    ? liveVitality
+    : encounter.currentVitality;
+  const vitalityFraction = displayedVitality / encounter.enemy.maxVitality;
 
   return (
     <View style={styles.encounterCard}>
@@ -158,7 +176,7 @@ function EncounterCard({ encounter, bankedAp, onEngage, onDismiss, onSpendAp }: 
         <View style={[styles.vitalityFill, { width: `${Math.max(vitalityFraction * 100, 0)}%` }]} />
       </View>
       <Text style={styles.vitalityText}>
-        {encounter.currentVitality} / {encounter.enemy.maxVitality}
+        {displayedVitality} / {encounter.enemy.maxVitality}
       </Text>
 
       {encounter.status === 'PENDING' ? (

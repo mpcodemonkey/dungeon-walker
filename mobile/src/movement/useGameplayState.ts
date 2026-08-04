@@ -15,6 +15,18 @@ export type { PedometerStatus };
 // Placeholder — tunable. See docs/chunk-3-movement.md.
 const POLL_INTERVAL_MS = 45_000;
 
+// Much shorter sync cadence while an encounter is ACTIVE, so real
+// defeat/XP/level-up confirmations (and the liveVitality reconciliation
+// below) don't lag up to a full POLL_INTERVAL_MS behind what the player
+// is already seeing. Only kicks in during a fight, not general walking —
+// see docs/chunk-4-combat.md, "Live damage feedback vs. sync cadence."
+const ACTIVE_ENCOUNTER_POLL_INTERVAL_MS = 5_000;
+
+// How often to locally re-read the step source for the optimistic
+// liveVitality preview during combat. A local device read, not a
+// network call — cheap enough to poll much faster than the real sync.
+const VITALITY_PREVIEW_INTERVAL_MS = 1_000;
+
 interface Coordinates {
   latitude: number;
   longitude: number;
@@ -25,6 +37,14 @@ interface GameplayState {
   level: number;
   pedometerStatus: PedometerStatus;
   encounter: Encounter | null;
+  // Locally-predicted vitality while an encounter is ACTIVE, updated every
+  // VITALITY_PREVIEW_INTERVAL_MS from steps the device has already
+  // recorded but the server hasn't confirmed yet — purely cosmetic, so the
+  // vitality bar visibly drops on every step instead of jumping once per
+  // sync. Never itself credits damage/XP/defeat; undefined outside combat
+  // or before the first local read completes, in which case callers
+  // should fall back to encounter.currentVitality.
+  liveVitality: number | undefined;
   combatMessage: string | undefined;
   engage: () => Promise<void>;
   dismiss: () => Promise<void>;
@@ -48,6 +68,7 @@ export function useGameplayState(
   const [level, setLevel] = useState(initialLevel);
   const [pedometerStatus, setPedometerStatus] = useState<PedometerStatus>('checking');
   const [encounter, setEncounter] = useState<Encounter | null>(null);
+  const [liveVitality, setLiveVitality] = useState<number | undefined>();
   const [combatMessage, setCombatMessage] = useState<string | undefined>();
 
   const lastSyncedAtRef = useRef(new Date());
@@ -73,6 +94,40 @@ export function useGameplayState(
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  // Optimistic vitality preview: re-anchors to the authoritative
+  // encounter/lastSyncedAtRef every time either changes (a real sync,
+  // engage, or spend-ap), then locally re-reads steps-since-that-anchor
+  // every VITALITY_PREVIEW_INTERVAL_MS to predict damage ahead of the
+  // next real sync. Display-only — see the liveVitality doc comment above.
+  useEffect(() => {
+    if (encounter?.status !== 'ACTIVE') {
+      setLiveVitality(undefined);
+      return;
+    }
+
+    const baselineVitality = encounter.currentVitality;
+    let cancelled = false;
+
+    async function preview() {
+      try {
+        const stepsSinceSync = await stepSource.getStepCountSince(lastSyncedAtRef.current);
+        if (!cancelled) {
+          setLiveVitality(Math.max(baselineVitality - stepsSinceSync, 0));
+        }
+      } catch {
+        // Leave the previous preview value up; the next tick retries.
+      }
+    }
+
+    void preview();
+    const interval = setInterval(() => void preview(), VITALITY_PREVIEW_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [encounter]);
 
   useEffect(() => {
     let cancelled = false;
@@ -127,11 +182,22 @@ export function useGameplayState(
         if (!cancelled) setPedometerStatus('unavailable');
       });
 
-    const interval = setInterval(() => void flush(), POLL_INTERVAL_MS);
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    function scheduleNext() {
+      if (cancelled) return;
+      const delay = encounterRef.current?.status === 'ACTIVE' ? ACTIVE_ENCOUNTER_POLL_INTERVAL_MS : POLL_INTERVAL_MS;
+      timeoutId = setTimeout(async () => {
+        await flush();
+        scheduleNext();
+      }, delay);
+    }
+
+    scheduleNext();
 
     return () => {
       cancelled = true;
-      clearInterval(interval);
+      clearTimeout(timeoutId);
     };
   }, [token]);
 
@@ -166,5 +232,5 @@ export function useGameplayState(
     }
   }
 
-  return { bankedAp, level, pedometerStatus, encounter, combatMessage, engage, dismiss, spendAp };
+  return { bankedAp, level, pedometerStatus, encounter, liveVitality, combatMessage, engage, dismiss, spendAp };
 }
